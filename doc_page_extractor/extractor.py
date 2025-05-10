@@ -32,6 +32,7 @@ class DocExtractor:
       self,
       model_cache_dir: str | None = None,
       device: Literal["cpu", "cuda"] = "cpu",
+      yolodivice='cuda:0',
       ocr_for_each_layouts: bool = True,
       extract_formula: bool = True,
       extract_table_format: TableLayoutParsedFormat | None = None,
@@ -40,6 +41,7 @@ class DocExtractor:
     ):
     self._logger = logger or getLogger(__name__)
     self._models_downloader = models_downloader or HuggingfaceModelsDownloader(self._logger, model_cache_dir)
+    self.yolodivce=yolodivice
 
     self._device: Literal["cpu", "cuda"] = device
     self._ocr_for_each_layouts: bool = ocr_for_each_layouts
@@ -97,12 +99,14 @@ class DocExtractor:
   def _yolo_extract_layouts(self, source: Image) -> Generator[Layout, None, None]:
     # about source parameter to see:
     # https://github.com/opendatalab/DocLayout-YOLO/blob/7c4be36bc61f11b67cf4a44ee47f3c41e9800a91/doclayout_yolo/data/build.py#L157-L175
+    print('yolo启用了GPU? ：',self.yolodivce)
     det_res = self._get_yolo().predict(
       source=source,
       imgsz=1024,
       conf=0.2,
-      device=self._device    # Device to use (e.g., "cuda" or "cpu")
+      device=self.yolodivce    # Device to use (e.g., "cuda" or "cpu")
     )
+    
     boxes = det_res[0].__dict__["boxes"]
 
     for cls_id, rect in zip(boxes.cls, boxes.xyxy):
